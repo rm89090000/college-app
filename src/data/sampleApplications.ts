@@ -1,5 +1,26 @@
 import { CollegeApplicationData } from '../types';
 
+export const EMPTY_APPLICATION_DATA: CollegeApplicationData = {
+  applicantName: '',
+  email: '',
+  phone: '',
+  address: '',
+  dob: '',
+  highSchool: '',
+  gpa: '',
+  testScores: '',
+  intendedMajor: '',
+  targetColleges: [],
+  personalStatementPrompt: 'Some students have a background, identity, interest, or talent that is so meaningful they believe their application would be incomplete without it. Share your story.',
+  personalStatement: '',
+  supplementalEssay1Prompt: 'Why are you interested in your intended major or university?',
+  supplementalEssay1: '',
+  activities: [],
+  honors: [],
+  signatureName: '',
+  signatureDate: '',
+};
+
 export const SAMPLE_APPLICATIONS: { id: string; label: string; college: string; data: CollegeApplicationData }[] = [
   {
     id: 'stanford-cs',

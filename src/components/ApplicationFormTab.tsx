@@ -8,6 +8,7 @@ interface ApplicationFormTabProps {
   onRunAnalysis: () => void;
   isAnalyzing: boolean;
   onLoadSample: (sampleId: string) => void;
+  onClearForm?: () => void;
 }
 
 export const ApplicationFormTab: React.FC<ApplicationFormTabProps> = ({
@@ -16,6 +17,7 @@ export const ApplicationFormTab: React.FC<ApplicationFormTabProps> = ({
   onRunAnalysis,
   isAnalyzing,
   onLoadSample,
+  onClearForm,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'essays' | 'activities' | 'import'>('profile');
   const [importText, setImportText] = useState('');
@@ -31,13 +33,13 @@ export const ApplicationFormTab: React.FC<ApplicationFormTabProps> = ({
   const handleAddActivity = () => {
     const newAct: ActivityItem = {
       id: `act-${Date.now()}`,
-      title: 'New Leadership Role',
-      organization: 'Organization / Club Name',
-      role: 'Member / Officer',
+      title: '',
+      organization: '',
+      role: '',
       grades: ['11', '12'],
-      hoursPerWeek: 5,
-      weeksPerYear: 30,
-      description: 'Describe your accomplishments, metric impact, and responsibilities.',
+      hoursPerWeek: 0,
+      weeksPerYear: 0,
+      description: '',
     };
     setAppData((prev) => ({ ...prev, activities: [...prev.activities, newAct] }));
   };
@@ -61,7 +63,7 @@ export const ApplicationFormTab: React.FC<ApplicationFormTabProps> = ({
   const handleAddHonor = () => {
     const newHon: HonorItem = {
       id: `hon-${Date.now()}`,
-      title: 'Award / Honor Name',
+      title: '',
       gradeLevel: '11th Grade',
       levelOfRecognition: 'National',
     };
@@ -184,6 +186,15 @@ export const ApplicationFormTab: React.FC<ApplicationFormTabProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {onClearForm && (
+              <button
+                onClick={onClearForm}
+                className="px-4 py-2 bg-[#2A2A2A] hover:bg-rose-700 text-white border border-white/20 text-[10px] uppercase tracking-widest font-bold transition-all"
+                title="Clear all fields to start with a blank form"
+              >
+                Clear Form
+              </button>
+            )}
             <button
               onClick={() => onLoadSample('stanford-cs')}
               className="px-4 py-2 bg-[#2A2A2A] hover:bg-[#3A3A3A] text-white border border-white/20 text-[10px] uppercase tracking-widest font-bold transition-all"

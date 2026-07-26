@@ -357,7 +357,7 @@ export const HandwritingCalibrationTab: React.FC<HandwritingCalibrationTabProps>
 
                 <div className="pt-2 border-b border-blue-200 flex justify-between items-center">
                   <span className="text-[9px] uppercase tracking-wider font-bold text-[#1A1A1A]/60">Student Signature:</span>
-                  <span style={getHandwritingCssStyle(style, true)}>Alex Rivera</span>
+                  <span style={getHandwritingCssStyle(style, true)}>Your Signature</span>
                 </div>
               </div>
             </div>

@@ -5,8 +5,9 @@ import { ApplicationFormTab } from './components/ApplicationFormTab';
 import { AIFeedbackTab } from './components/AIFeedbackTab';
 import { HandwritingCalibrationTab } from './components/HandwritingCalibrationTab';
 import { HandwrittenAutofillPortalTab } from './components/HandwrittenAutofillPortalTab';
+import { ChromeExtensionTab } from './components/ChromeExtensionTab';
 import { CollegeApplicationData, ApplicationAnalysisResult, HandwritingStyle, SavedDossier } from './types';
-import { SAMPLE_APPLICATIONS } from './data/sampleApplications';
+import { SAMPLE_APPLICATIONS, EMPTY_APPLICATION_DATA } from './data/sampleApplications';
 import { DEFAULT_HANDWRITING_STYLE } from './utils/handwritingEngine';
 import { 
   initializeDatabaseAuth, 
@@ -17,8 +18,8 @@ import {
 import { User } from 'firebase/auth';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'application' | 'feedback' | 'handwriting' | 'autofill'>('application');
-  const [appData, setAppData] = useState<CollegeApplicationData>(SAMPLE_APPLICATIONS[0].data);
+  const [activeTab, setActiveTab] = useState<'application' | 'feedback' | 'handwriting' | 'autofill' | 'extension'>('application');
+  const [appData, setAppData] = useState<CollegeApplicationData>(EMPTY_APPLICATION_DATA);
   const [analysis, setAnalysis] = useState<ApplicationAnalysisResult | null>(null);
   const [handwritingStyle, setHandwritingStyle] = useState<HandwritingStyle>(DEFAULT_HANDWRITING_STYLE);
   const [handwritingCalibrated, setHandwritingCalibrated] = useState(false);
@@ -46,26 +47,39 @@ export default function App() {
         async (dossiers) => {
           setSavedDossiers(dossiers);
 
-          // If user has no dossiers saved in database yet, create initial seed document
+          // If user has no dossiers saved in database yet, create initial blank seed document
           if (dossiers.length === 0 && !isHydratedRef.current) {
             isHydratedRef.current = true;
-            const seedTitle = `${SAMPLE_APPLICATIONS[0].data.applicantName} — Common App`;
+            const seedTitle = `My College Application`;
             const seedId = await saveDossierToDb({
               userId: user.uid,
               title: seedTitle,
-              data: SAMPLE_APPLICATIONS[0].data,
+              data: EMPTY_APPLICATION_DATA,
               handwritingStyle: DEFAULT_HANDWRITING_STYLE,
               analysis: null,
             });
             setActiveDossierId(seedId);
+            setAppData(EMPTY_APPLICATION_DATA);
             setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
           } else if (!isHydratedRef.current && dossiers.length > 0) {
             isHydratedRef.current = true;
             const first = dossiers[0];
             setActiveDossierId(first.id);
-            setAppData(first.data);
+            if (first.data.applicantName === 'Alex Rivera') {
+              setAppData(EMPTY_APPLICATION_DATA);
+              saveDossierToDb({
+                id: first.id,
+                userId: user.uid,
+                title: 'My College Application',
+                data: EMPTY_APPLICATION_DATA,
+                handwritingStyle: DEFAULT_HANDWRITING_STYLE,
+                analysis: null,
+              });
+            } else {
+              setAppData(first.data);
+            }
             if (first.handwritingStyle) setHandwritingStyle(first.handwritingStyle);
-            if (first.analysis) setAnalysis(first.analysis);
+            if (first.analysis && first.data.applicantName !== 'Alex Rivera') setAnalysis(first.analysis);
             setLastSavedTime(new Date(first.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
           }
         },
@@ -121,30 +135,11 @@ export default function App() {
   // Create New Blank Dossier in Database
   const handleCreateNewDossier = async () => {
     if (!currentUser) return;
-    const blankData: CollegeApplicationData = {
-      applicantName: 'New Student',
-      email: '',
-      phone: '',
-      address: '',
-      dob: '',
-      highSchool: '',
-      gpa: '',
-      testScores: '',
-      intendedMajor: '',
-      targetColleges: [],
-      personalStatementPrompt: 'Share an essay on any topic of your choice.',
-      personalStatement: '',
-      supplementalEssay1Prompt: 'Why do you wish to pursue your chosen major at our university?',
-      supplementalEssay1: '',
-      activities: [],
-      honors: [],
-      signatureName: '',
-      signatureDate: new Date().toISOString().split('T')[0],
-    };
+    const blankData = EMPTY_APPLICATION_DATA;
 
     const savedId = await saveDossierToDb({
       userId: currentUser.uid,
-      title: 'New Student Application',
+      title: 'New Blank Application',
       data: blankData,
       handwritingStyle: DEFAULT_HANDWRITING_STYLE,
       analysis: null,
@@ -155,6 +150,24 @@ export default function App() {
     setHandwritingStyle(DEFAULT_HANDWRITING_STYLE);
     setAnalysis(null);
     setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  };
+
+  // Clear Form handler
+  const handleClearForm = async () => {
+    setAppData(EMPTY_APPLICATION_DATA);
+    setAnalysis(null);
+    if (currentUser) {
+      const savedId = await saveDossierToDb({
+        id: activeDossierId || undefined,
+        userId: currentUser.uid,
+        title: 'My Blank Application',
+        data: EMPTY_APPLICATION_DATA,
+        handwritingStyle,
+        analysis: null,
+      });
+      setActiveDossierId(savedId);
+      setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }
   };
 
   // Delete Dossier from Database
@@ -236,6 +249,7 @@ export default function App() {
         hasAnalysis={!!analysis}
         handwritingCalibrated={handwritingCalibrated}
         onLoadSample={handleLoadSample}
+        onClearForm={handleClearForm}
       />
 
       {/* Database Dossier Manager Toolbar */}
@@ -260,6 +274,7 @@ export default function App() {
             onRunAnalysis={handleRunAnalysis}
             isAnalyzing={isAnalyzing}
             onLoadSample={handleLoadSample}
+            onClearForm={handleClearForm}
           />
         )}
 
@@ -301,6 +316,12 @@ export default function App() {
           <HandwrittenAutofillPortalTab
             appData={appData}
             style={handwritingStyle}
+          />
+        )}
+
+        {activeTab === 'extension' && (
+          <ChromeExtensionTab
+            appData={appData}
           />
         )}
       </main>
