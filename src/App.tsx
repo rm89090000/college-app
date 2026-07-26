@@ -1,0 +1,318 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Header } from './components/Header';
+import { DatabaseDossierManager } from './components/DatabaseDossierManager';
+import { ApplicationFormTab } from './components/ApplicationFormTab';
+import { AIFeedbackTab } from './components/AIFeedbackTab';
+import { HandwritingCalibrationTab } from './components/HandwritingCalibrationTab';
+import { HandwrittenAutofillPortalTab } from './components/HandwrittenAutofillPortalTab';
+import { CollegeApplicationData, ApplicationAnalysisResult, HandwritingStyle, SavedDossier } from './types';
+import { SAMPLE_APPLICATIONS } from './data/sampleApplications';
+import { DEFAULT_HANDWRITING_STYLE } from './utils/handwritingEngine';
+import { 
+  initializeDatabaseAuth, 
+  subscribeToDossiers, 
+  saveDossierToDb, 
+  deleteDossierFromDb 
+} from './lib/firebase';
+import { User } from 'firebase/auth';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<'application' | 'feedback' | 'handwriting' | 'autofill'>('application');
+  const [appData, setAppData] = useState<CollegeApplicationData>(SAMPLE_APPLICATIONS[0].data);
+  const [analysis, setAnalysis] = useState<ApplicationAnalysisResult | null>(null);
+  const [handwritingStyle, setHandwritingStyle] = useState<HandwritingStyle>(DEFAULT_HANDWRITING_STYLE);
+  const [handwritingCalibrated, setHandwritingCalibrated] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Firestore Database State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [savedDossiers, setSavedDossiers] = useState<SavedDossier[]>([]);
+  const [activeDossierId, setActiveDossierId] = useState<string | null>(null);
+  const [isSavingToDb, setIsSavingToDb] = useState(false);
+  const [isDbConnected, setIsDbConnected] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+
+  // Track whether initial hydration has happened
+  const isHydratedRef = useRef(false);
+
+  // 1. Initialize Firebase Auth and Subscribe to Firestore Database
+  useEffect(() => {
+    const unsubscribeAuth = initializeDatabaseAuth((user) => {
+      setCurrentUser(user);
+      setIsDbConnected(true);
+
+      const unsubscribeSnapshot = subscribeToDossiers(
+        user.uid,
+        async (dossiers) => {
+          setSavedDossiers(dossiers);
+
+          // If user has no dossiers saved in database yet, create initial seed document
+          if (dossiers.length === 0 && !isHydratedRef.current) {
+            isHydratedRef.current = true;
+            const seedTitle = `${SAMPLE_APPLICATIONS[0].data.applicantName} — Common App`;
+            const seedId = await saveDossierToDb({
+              userId: user.uid,
+              title: seedTitle,
+              data: SAMPLE_APPLICATIONS[0].data,
+              handwritingStyle: DEFAULT_HANDWRITING_STYLE,
+              analysis: null,
+            });
+            setActiveDossierId(seedId);
+            setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+          } else if (!isHydratedRef.current && dossiers.length > 0) {
+            isHydratedRef.current = true;
+            const first = dossiers[0];
+            setActiveDossierId(first.id);
+            setAppData(first.data);
+            if (first.handwritingStyle) setHandwritingStyle(first.handwritingStyle);
+            if (first.analysis) setAnalysis(first.analysis);
+            setLastSavedTime(new Date(first.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+          }
+        },
+        (err) => {
+          console.error('Firestore Error:', err);
+          setIsDbConnected(false);
+        }
+      );
+
+      return () => unsubscribeSnapshot();
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Save current active state to Firestore
+  const handleSaveCurrentToDb = async (customTitle?: string) => {
+    if (!currentUser) return;
+    setIsSavingToDb(true);
+    try {
+      const existingDossier = savedDossiers.find((d) => d.id === activeDossierId);
+      const title = customTitle || existingDossier?.title || `${appData.applicantName || 'Applicant'} General Information`;
+
+      const savedId = await saveDossierToDb({
+        id: activeDossierId || undefined,
+        userId: currentUser.uid,
+        title,
+        data: appData,
+        handwritingStyle,
+        analysis,
+      });
+
+      setActiveDossierId(savedId);
+      const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setLastSavedTime(nowFormatted);
+    } catch (err) {
+      console.error('Save to database error:', err);
+      alert('Could not save document to Firestore database. Please try again.');
+    } finally {
+      setIsSavingToDb(false);
+    }
+  };
+
+  // Switch Active Dossier from Database
+  const handleSelectDossier = (dossier: SavedDossier) => {
+    setActiveDossierId(dossier.id);
+    setAppData(dossier.data);
+    setHandwritingStyle(dossier.handwritingStyle || DEFAULT_HANDWRITING_STYLE);
+    setAnalysis(dossier.analysis || null);
+    setLastSavedTime(new Date(dossier.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  };
+
+  // Create New Blank Dossier in Database
+  const handleCreateNewDossier = async () => {
+    if (!currentUser) return;
+    const blankData: CollegeApplicationData = {
+      applicantName: 'New Student',
+      email: '',
+      phone: '',
+      address: '',
+      dob: '',
+      highSchool: '',
+      gpa: '',
+      testScores: '',
+      intendedMajor: '',
+      targetColleges: [],
+      personalStatementPrompt: 'Share an essay on any topic of your choice.',
+      personalStatement: '',
+      supplementalEssay1Prompt: 'Why do you wish to pursue your chosen major at our university?',
+      supplementalEssay1: '',
+      activities: [],
+      honors: [],
+      signatureName: '',
+      signatureDate: new Date().toISOString().split('T')[0],
+    };
+
+    const savedId = await saveDossierToDb({
+      userId: currentUser.uid,
+      title: 'New Student Application',
+      data: blankData,
+      handwritingStyle: DEFAULT_HANDWRITING_STYLE,
+      analysis: null,
+    });
+
+    setActiveDossierId(savedId);
+    setAppData(blankData);
+    setHandwritingStyle(DEFAULT_HANDWRITING_STYLE);
+    setAnalysis(null);
+    setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  };
+
+  // Delete Dossier from Database
+  const handleDeleteDossier = async (id: string) => {
+    await deleteDossierFromDb(id);
+    const remaining = savedDossiers.filter((d) => d.id !== id);
+    if (remaining.length > 0) {
+      handleSelectDossier(remaining[0]);
+    } else {
+      await handleCreateNewDossier();
+    }
+  };
+
+  // Run AI Admissions Review on current application data
+  const handleRunAnalysis = async () => {
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch('/api/analyze-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(appData),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        setAnalysis(json.data);
+        setActiveTab('feedback');
+
+        // Automatically update record in Firestore with newly generated analysis
+        if (currentUser) {
+          await saveDossierToDb({
+            id: activeDossierId || undefined,
+            userId: currentUser.uid,
+            title: savedDossiers.find((d) => d.id === activeDossierId)?.title || `${appData.applicantName} Application`,
+            data: appData,
+            handwritingStyle,
+            analysis: json.data,
+          });
+          setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        }
+      } else {
+        alert(json.error || 'Failed to analyze application. Please try again.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Error connecting to server. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Load sample dataset & save to database
+  const handleLoadSample = async (sampleId: string) => {
+    const found = SAMPLE_APPLICATIONS.find((s) => s.id === sampleId);
+    if (found) {
+      setAppData(found.data);
+      setAnalysis(null);
+
+      if (currentUser) {
+        const newDossierId = await saveDossierToDb({
+          userId: currentUser.uid,
+          title: `${found.data.applicantName} — ${found.label}`,
+          data: found.data,
+          handwritingStyle: DEFAULT_HANDWRITING_STYLE,
+          analysis: null,
+        });
+        setActiveDossierId(newDossierId);
+        setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F9F7F2] text-[#1A1A1A] flex flex-col font-sans selection:bg-[#1A1A1A] selection:text-white">
+      {/* Header Bar */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        hasAnalysis={!!analysis}
+        handwritingCalibrated={handwritingCalibrated}
+        onLoadSample={handleLoadSample}
+      />
+
+      {/* Database Dossier Manager Toolbar */}
+      <DatabaseDossierManager
+        savedDossiers={savedDossiers}
+        activeDossierId={activeDossierId}
+        onSelectDossier={handleSelectDossier}
+        onSaveCurrentToDb={handleSaveCurrentToDb}
+        onCreateNewDossier={handleCreateNewDossier}
+        onDeleteDossier={handleDeleteDossier}
+        isSaving={isSavingToDb}
+        isDbConnected={isDbConnected}
+        lastSavedTime={lastSavedTime}
+      />
+
+      {/* Main Container */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'application' && (
+          <ApplicationFormTab
+            appData={appData}
+            setAppData={setAppData}
+            onRunAnalysis={handleRunAnalysis}
+            isAnalyzing={isAnalyzing}
+            onLoadSample={handleLoadSample}
+          />
+        )}
+
+        {activeTab === 'feedback' && (
+          <AIFeedbackTab
+            analysis={analysis}
+            appData={appData}
+            setAppData={setAppData}
+            onRunAnalysis={handleRunAnalysis}
+            isAnalyzing={isAnalyzing}
+          />
+        )}
+
+        {activeTab === 'handwriting' && (
+          <HandwritingCalibrationTab
+            style={handwritingStyle}
+            setStyle={(newStyleOrFn) => {
+              setHandwritingStyle((prev) => {
+                const nextStyle = typeof newStyleOrFn === 'function' ? newStyleOrFn(prev) : newStyleOrFn;
+                // Auto-sync style changes to Firestore database
+                if (currentUser && activeDossierId) {
+                  saveDossierToDb({
+                    id: activeDossierId,
+                    userId: currentUser.uid,
+                    title: savedDossiers.find((d) => d.id === activeDossierId)?.title || 'General Information',
+                    data: appData,
+                    handwritingStyle: nextStyle,
+                    analysis,
+                  });
+                }
+                return nextStyle;
+              });
+            }}
+            onCalibrateComplete={() => setHandwritingCalibrated(true)}
+          />
+        )}
+
+        {activeTab === 'autofill' && (
+          <HandwrittenAutofillPortalTab
+            appData={appData}
+            style={handwritingStyle}
+          />
+        )}
+      </main>
+
+      {/* Editorial Footer */}
+      <footer className="border-t border-[#1A1A1A] bg-white py-8 text-center text-xs text-[#1A1A1A]/70 no-print mt-auto">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <span className="font-serif italic font-bold text-lg text-[#1A1A1A]">Collegeify</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
