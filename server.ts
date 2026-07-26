@@ -13,7 +13,10 @@ app.use(express.json({ limit: "25mb" }));
 
 // Initialize Gemini Client
 const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY || "AIzaSyCpi2eYR0jwvCTZO7UkUeCD5tmAbgSyCxc";
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is required.");
+  }
   return new GoogleGenAI({
     apiKey,
     httpOptions: {
