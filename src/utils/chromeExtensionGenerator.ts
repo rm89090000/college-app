@@ -499,6 +499,7 @@ This Chrome Extension allows you to automatically fill out college application p
   // Standard SVG icon placeholders for 16, 48, 128
   const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <rect width="128" height="128" fill="#1A1A1A"/>
+  <rect y="112" width="128" height="16" fill="#10b981"/>
   <text x="64" y="85" font-family="Georgia, serif" font-style="italic" font-weight="bold" font-size="80" fill="#FFFFFF" text-anchor="middle">C</text>
 </svg>`;
 
@@ -514,9 +515,48 @@ This Chrome Extension allows you to automatically fill out college application p
   };
 }
 
+function createPngIconBlob(size: number): Promise<Blob> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Dark background
+      ctx.fillStyle = '#1A1A1A';
+      ctx.fillRect(0, 0, size, size);
+
+      // Emerald accent bar
+      ctx.fillStyle = '#10b981';
+      const barHeight = Math.max(2, Math.round(size * 0.12));
+      ctx.fillRect(0, size - barHeight, size, barHeight);
+
+      // White "C" letter
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `italic bold ${Math.round(size * 0.65)}px Georgia, serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('C', size / 2, size / 2 - Math.round(size * 0.04));
+    }
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        resolve(new Blob([], { type: 'image/png' }));
+      }
+    }, 'image/png');
+  });
+}
+
 export async function downloadExtensionZip(appData: CollegeApplicationData) {
   const files = getExtensionFiles(appData);
   const zip = new JSZip();
+
+  const [icon16Blob, icon48Blob, icon128Blob] = await Promise.all([
+    createPngIconBlob(16),
+    createPngIconBlob(48),
+    createPngIconBlob(128),
+  ]);
 
   zip.file('manifest.json', files.manifest);
   zip.file('background.js', files.backgroundJs);
@@ -525,6 +565,9 @@ export async function downloadExtensionZip(appData: CollegeApplicationData) {
   zip.file('popup.css', files.popupCss);
   zip.file('popup.js', files.popupJs);
   zip.file('README.md', files.readme);
+  zip.file('icon16.png', icon16Blob);
+  zip.file('icon48.png', icon48Blob);
+  zip.file('icon128.png', icon128Blob);
   zip.file('icon.svg', files.iconSvg);
 
   const content = await zip.generateAsync({ type: 'blob' });
