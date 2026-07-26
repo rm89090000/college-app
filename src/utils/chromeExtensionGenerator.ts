@@ -7,7 +7,7 @@ export function getExtensionFiles(appData: CollegeApplicationData) {
       manifest_version: 3,
       name: 'Collegeify — College Application Autofill & Essay AI',
       version: '1.0.0',
-      description: 'Instantly autofill college application forms (Common App, Coalition App, College Portals) with your Collegeify dossier data and AI essays.',
+      description: 'Instantly autofill college application forms (Common App, UC Application, Coalition App, College Portals) with your Collegeify dossier data and AI essays.',
       permissions: ['activeTab', 'storage', 'scripting'],
       action: {
         default_popup: 'popup.html',

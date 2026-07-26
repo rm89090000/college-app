@@ -12,7 +12,8 @@ import {
   RefreshCw,
   ExternalLink,
   ShieldCheck,
-  Monitor
+  Monitor,
+  Github
 } from 'lucide-react';
 import { CollegeApplicationData } from '../types';
 import { getExtensionFiles, downloadExtensionZip } from '../utils/chromeExtensionGenerator';
@@ -147,9 +148,11 @@ export const ChromeExtensionTab: React.FC<ChromeExtensionTabProps> = ({ appData 
       {/* Top Banner / Hero Header */}
       <div className="bg-[#1A1A1A] text-white p-6 sm:p-8 border border-[#1A1A1A] shadow-[4px_4px_0px_0px_#10b981] relative overflow-hidden">
         <div className="relative z-10 max-w-3xl space-y-4">
-          <div className="inline-flex items-center space-x-2 bg-[#10b981] text-black px-3 py-1 text-[11px] font-bold uppercase tracking-widest">
-            <Chrome className="w-3.5 h-3.5" />
-            <span>Chrome Extension Manifest V3</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center space-x-2 bg-[#10b981] text-black px-3 py-1 text-[11px] font-bold uppercase tracking-widest">
+              <Chrome className="w-3.5 h-3.5" />
+              <span>Chrome Extension Manifest V3</span>
+            </div>
           </div>
 
           <h2 className="font-serif italic text-3xl sm:text-4xl font-bold tracking-tight">
@@ -157,10 +160,10 @@ export const ChromeExtensionTab: React.FC<ChromeExtensionTabProps> = ({ appData 
           </h2>
 
           <p className="text-sm text-gray-300 leading-relaxed font-sans">
-            Transform your Collegeify dossier into a high-powered Chrome Extension. Automatically detect form fields on Common App, Coalition App, ApplyTexas, or any university application portal and autofill your student credentials, grades, and AI-optimized essays in seconds.
+            Transform your Collegeify dossier into a high-powered Chrome Extension. Automatically detect form fields on Common App, UC Application, Coalition App, ApplyTexas, or any university portal and autofill your credentials, grades, and essays in seconds.
           </p>
 
-          <div className="pt-2 flex flex-wrap items-center gap-4">
+          <div className="pt-2 flex flex-wrap items-center gap-3">
             <button
               onClick={handleDownload}
               disabled={isDownloading}
@@ -492,11 +495,13 @@ export const ChromeExtensionTab: React.FC<ChromeExtensionTabProps> = ({ appData 
 
       {/* SECTION 2: CHROME EXTENSION INSTALLATION GUIDE */}
       <div id="installation-guide" className="bg-[#F2EDE4] border border-[#1A1A1A] p-6 sm:p-8 shadow-[4px_4px_0px_0px_#1A1A1A]">
-        <div className="flex items-center space-x-3 border-b border-[#1A1A1A] pb-4 mb-6">
-          <Chrome className="w-6 h-6 text-emerald-600" />
-          <div>
-            <h3 className="font-serif italic text-2xl font-bold text-[#1A1A1A]">How to Install in Google Chrome</h3>
-            <p className="text-xs text-gray-600 uppercase tracking-wider font-semibold">4 Easy Steps to Load Unpacked Extension</p>
+        <div className="flex flex-wrap items-center justify-between border-b border-[#1A1A1A] pb-4 mb-6 gap-3">
+          <div className="flex items-center space-x-3">
+            <Chrome className="w-6 h-6 text-emerald-600" />
+            <div>
+              <h3 className="font-serif italic text-2xl font-bold text-[#1A1A1A]">How to Install in Google Chrome</h3>
+              <p className="text-xs text-gray-600 uppercase tracking-wider font-semibold">4 Easy Steps to Load Unpacked Extension</p>
+            </div>
           </div>
         </div>
 
@@ -508,7 +513,7 @@ export const ChromeExtensionTab: React.FC<ChromeExtensionTabProps> = ({ appData 
             </div>
             <h4 className="font-bold text-sm">Download ZIP</h4>
             <p className="text-xs text-gray-600 leading-relaxed">
-              Click the green <strong>Download Chrome Extension (.zip)</strong> button above to save the package.
+              Click the green <strong>Download Chrome Extension (.zip)</strong> button above to save the extension package.
             </p>
           </div>
 
@@ -530,7 +535,7 @@ export const ChromeExtensionTab: React.FC<ChromeExtensionTabProps> = ({ appData 
             </div>
             <h4 className="font-bold text-sm">Open Extensions</h4>
             <p className="text-xs text-gray-600 leading-relaxed">
-              Open Chrome and go to <code className="bg-gray-100 px-1 border border-gray-300 rounded text-[11px]">chrome://extensions</code>. Turn on <strong>Developer mode</strong>.
+              Open Chrome and navigate to <code className="bg-gray-100 px-1 border border-gray-300 rounded text-[11px]">chrome://extensions</code>. Enable <strong>Developer mode</strong> in the top right.
             </p>
           </div>
 
@@ -541,7 +546,7 @@ export const ChromeExtensionTab: React.FC<ChromeExtensionTabProps> = ({ appData 
             </div>
             <h4 className="font-bold text-sm">Load Unpacked</h4>
             <p className="text-xs text-gray-600 leading-relaxed">
-              Click <strong>Load unpacked</strong> and select the unzipped folder. Pin Collegeify to start autofilling!
+              Click <strong>Load unpacked</strong> and select the unzipped extension directory. Pin Collegeify to start autofilling!
             </p>
           </div>
         </div>
@@ -552,7 +557,9 @@ export const ChromeExtensionTab: React.FC<ChromeExtensionTabProps> = ({ appData 
         <div className="bg-[#1A1A1A] text-white px-6 py-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <Code2 className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-serif italic text-lg font-bold">Chrome Extension Codebase (Manifest V3)</h3>
+            <h3 className="font-serif italic text-lg font-bold">
+              Chrome Extension Codebase (Manifest V3)
+            </h3>
           </div>
 
           <button

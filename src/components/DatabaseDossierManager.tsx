@@ -94,7 +94,7 @@ export const DatabaseDossierManager: React.FC<DatabaseDossierManagerProps> = ({
             <div className="flex items-center justify-between border-b border-[#1A1A1A]/20 pb-4">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#1A1A1A]/50">Persistent Storage</p>
-                <h3 className="text-xl font-serif font-light text-[#1A1A1A]">Firestore Cloud Database Records</h3>
+                <h3 className="text-xl font-serif font-light text-[#1A1A1A]">Save</h3>
               </div>
               
               <button
@@ -204,7 +204,7 @@ export const DatabaseDossierManager: React.FC<DatabaseDossierManagerProps> = ({
 
             {/* Modal Footer */}
             <div className="pt-3 border-t border-[#1A1A1A]/20 flex justify-between items-center text-[10px] uppercase tracking-wider text-[#1A1A1A]/60 font-semibold">
-              <span>All records synced with Firestore Cloud</span>
+              <span>All records synced</span>
               <button
                 onClick={() => {
                   onCreateNewDossier();
